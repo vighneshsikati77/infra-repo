@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        # GitOps repo containing Helm charts & ArgoCD manifests
+       // GitOps repo containing Helm charts & ArgoCD manifests
         GITOPS_REPO = 'https://github.com/vighneshsikati77/mern-app.git'
         GITOPS_BRANCH = 'main'
     }
