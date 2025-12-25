@@ -2,67 +2,69 @@ pipeline {
     agent any
 
     environment {
-        // GitOps repo containing Helm charts & ArgoCD manifests
-        GITOPS_REPO = 'git@github.com:vighneshsikati77/mern-app.git'
-        GITOPS_BRANCH = 'main'
+        GITOPS_REPO = "git@github.com:vighneshsikati77/mern-app.git"
     }
 
     stages {
 
         stage('Clone GitOps Repo') {
             steps {
-                echo "Cloning GitOps repo..."
-                // Remove previous clone if exists
-                sh "rm -rf gitops-temp"
-                // Clone GitOps repo into temp folder
-                sh "git clone -b ${GITOPS_BRANCH} ${GITOPS_REPO} gitops-temp"
+                sshagent(credentials: ['github-ssh']) {
+                    sh '''
+                        mkdir -p ~/.ssh
+                        chmod 700 ~/.ssh
+
+                        ssh-keyscan github.com >> ~/.ssh/known_hosts
+                        chmod 644 ~/.ssh/known_hosts
+
+                        rm -rf gitops-temp
+                        git clone -b main ${GITOPS_REPO} gitops-temp
+                    '''
+                }
             }
         }
 
         stage('Update Helm values.yaml for Backend') {
             steps {
-                echo "Updating backend image in Helm chart..."
-                sh """
-                sed -i 's|repository:.*|repository: vighneshsikati77/backend|' gitops-temp/helm/backend/values.yaml
-                sed -i 's|tag:.*|tag: latest|' gitops-temp/helm/backend/values.yaml
-                """
+                sh '''
+                  cd gitops-temp/helm/mern-app/backend
+                  sed -i "s|tag:.*|tag: ${BUILD_NUMBER}|" values.yaml
+                '''
             }
         }
 
         stage('Update Helm values.yaml for Frontend') {
             steps {
-                echo "Updating frontend image in Helm chart..."
-                sh """
-                sed -i 's|repository:.*|repository: vighneshsikati77/frontend|' gitops-temp/helm/frontend/values.yaml
-                sed -i 's|tag:.*|tag: latest|' gitops-temp/helm/frontend/values.yaml
-                """
+                sh '''
+                  cd gitops-temp/helm/mern-app/frontend
+                  sed -i "s|tag:.*|tag: ${BUILD_NUMBER}|" values.yaml
+                '''
             }
         }
 
         stage('Push Changes to GitOps Repo') {
-           steps {
-               sshagent(['gitops-ssh']) {
-                   sh """
-                   cd gitops-temp
-                   git config --global user.email "vighneshsikati77@gmail.com"
-                   git config --global user.name "vighneshsikati77"
-                   git add .
-                   git commit -m "Update image tags from Jenkins" || echo "No changes to commit"
-                   git push origin ${GITOPS_BRANCH}
-                    """
-       }
+            steps {
+                sshagent(credentials: ['github-ssh']) {
+                    sh '''
+                        cd gitops-temp
+                        git config user.email "jenkins@ci.local"
+                        git config user.name "Jenkins"
 
-    }
-}
-
+                        git add .
+                        git commit -m "Update image tags to ${BUILD_NUMBER}"
+                        git push origin main
+                    '''
+                }
+            }
+        }
     }
 
     post {
-        success {
-            echo "✅ Jenkins pipeline completed successfully!"
-        }
         failure {
             echo "❌ Jenkins pipeline failed!"
+        }
+        success {
+            echo "✅ GitOps update successful!"
         }
     }
 }
