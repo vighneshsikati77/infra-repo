@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         // GitOps repo containing Helm charts & ArgoCD manifests
-        GITOPS_REPO = 'https://github.com/vighneshsikati77/mern-app.git'
+        GITOPS_REPO = 'git@github.com:vighneshsikati77/mern-app.git'
         GITOPS_BRANCH = 'main'
     }
 
@@ -41,6 +41,7 @@ pipeline {
 
         stage('Push Changes to GitOps Repo') {
            steps {
+               sshagent(['gitops-ssh']) {
                echo "Committing and pushing changes to GitOps repo..."
                sh """
                cd gitops-temp
@@ -50,6 +51,7 @@ pipeline {
                git commit -m "Update image tags from Jenkins" || echo "No changes to commit"
                git push origin ${GITOPS_BRANCH}
                """
+        }
     }
 }
 
