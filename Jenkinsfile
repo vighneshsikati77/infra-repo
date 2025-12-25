@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-       // GitOps repo containing Helm charts & ArgoCD manifests
+        // GitOps repo containing Helm charts & ArgoCD manifests
         GITOPS_REPO = 'https://github.com/vighneshsikati77/mern-app.git'
         GITOPS_BRANCH = 'main'
     }
@@ -12,8 +12,10 @@ pipeline {
         stage('Clone GitOps Repo') {
             steps {
                 echo "Cloning GitOps repo..."
+                // Remove previous clone if exists
                 sh "rm -rf gitops-temp"
-                sh "git clone -b ${GITOPS_BRANCH} ${GITOPS_REPO} mern-app"
+                // Clone GitOps repo into temp folder
+                sh "git clone -b ${GITOPS_BRANCH} ${GITOPS_REPO} gitops-temp"
             }
         }
 
@@ -21,8 +23,8 @@ pipeline {
             steps {
                 echo "Updating backend image in Helm chart..."
                 sh """
-                sed -i 's|repository:.*|repository: vighneshsikati77/backend|' mern-app/helm/backend/values.yaml
-                sed -i 's|tag:.*|tag: latest|' mern-app/helm/backend/values.yaml
+                sed -i 's|repository:.*|repository: vighneshsikati77/backend|' gitops-temp/helm/backend/values.yaml
+                sed -i 's|tag:.*|tag: latest|' gitops-temp/helm/backend/values.yaml
                 """
             }
         }
@@ -31,8 +33,8 @@ pipeline {
             steps {
                 echo "Updating frontend image in Helm chart..."
                 sh """
-                sed -i 's|repository:.*|repository: vighneshsikati77/frontend|' mern-appp/helm/frontend/values.yaml
-                sed -i 's|tag:.*|tag: latest|' mern-app/helm/frontend/values.yaml
+                sed -i 's|repository:.*|repository: vighneshsikati77/frontend|' gitops-temp/helm/frontend/values.yaml
+                sed -i 's|tag:.*|tag: latest|' gitops-temp/helm/frontend/values.yaml
                 """
             }
         }
