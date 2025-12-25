@@ -56,7 +56,7 @@ pipeline {
                     sed -i "s/tag:.*/tag: ${IMAGE_TAG}/" gitops-temp/helm/backend/values.yaml
 
                     echo "Updating MONGODB image tag"
-                    sed -i "s/tag:.*/tag: ${IMAGE_TAG}/" gitops-temp/helm/mongodb/values.yaml
+                    sed -i "s|^\(\s*tag:\).*|\1 6.0|" gitops-temp/helm/mongodb/values.yaml
                 '''
             }
         }
