@@ -42,16 +42,16 @@ pipeline {
         stage('Push Changes to GitOps Repo') {
            steps {
                sshagent(['gitops-ssh']) {
-               echo "Committing and pushing changes to GitOps repo..."
-               sh """
-               cd gitops-temp
-               git config --global user.email "vighneshsikati77@gmail.com"
-               git config --global user.name "vighneshsikati77"
-               git add .
-               git commit -m "Update image tags from Jenkins" || echo "No changes to commit"
-               git push origin ${GITOPS_BRANCH}
-               """
-        }
+                   sh """
+                   cd gitops-temp
+                   git config --global user.email "vighneshsikati77@gmail.com"
+                   git config --global user.name "vighneshsikati77"
+                   git add .
+                   git commit -m "Update image tags from Jenkins" || echo "No changes to commit"
+                   git push origin ${GITOPS_BRANCH}
+                    """
+       }
+
     }
 }
 
