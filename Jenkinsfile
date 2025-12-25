@@ -3,55 +3,79 @@ pipeline {
 
     environment {
         GITOPS_REPO = "git@github.com:vighneshsikati77/mern-app.git"
+        FRONTEND_IMAGE = "vighneshsikati77/frontend"
+        BACKEND_IMAGE  = "vighneshsikati77/backend"
+        IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
     stages {
 
-        stage('Clone GitOps Repo') {
+        stage('Prepare SSH') {
             steps {
-                sshagent(credentials: ['github-ssh']) {
+                withCredentials([
+                    sshUserPrivateKey(
+                        credentialsId: 'github-ssh',
+                        keyFileVariable: 'SSH_KEY'
+                    )
+                ]) {
                     sh '''
                         mkdir -p ~/.ssh
                         chmod 700 ~/.ssh
-
                         ssh-keyscan github.com >> ~/.ssh/known_hosts
                         chmod 644 ~/.ssh/known_hosts
-
-                        rm -rf gitops-temp
-                        git clone -b main ${GITOPS_REPO} gitops-temp
+                        export GIT_SSH_COMMAND="ssh -i $SSH_KEY -o UserKnownHostsFile=~/.ssh/known_hosts"
                     '''
                 }
             }
         }
 
-        stage('Update Helm values.yaml for Backend') {
+        stage('Clone GitOps Repo') {
             steps {
-                sh '''
-                  cd gitops-temp/helm/mern-app/backend
-                  sed -i "s|tag:.*|tag: ${BUILD_NUMBER}|" values.yaml
-                '''
-            }
-        }
-
-        stage('Update Helm values.yaml for Frontend') {
-            steps {
-                sh '''
-                  cd gitops-temp/helm/mern-app/frontend
-                  sed -i "s|tag:.*|tag: ${BUILD_NUMBER}|" values.yaml
-                '''
-            }
-        }
-
-        stage('Push Changes to GitOps Repo') {
-            steps {
-                sshagent(credentials: ['github-ssh']) {
+                withCredentials([
+                    sshUserPrivateKey(
+                        credentialsId: 'github-ssh',
+                        keyFileVariable: 'SSH_KEY'
+                    )
+                ]) {
                     sh '''
+                        export GIT_SSH_COMMAND="ssh -i $SSH_KEY -o UserKnownHostsFile=~/.ssh/known_hosts"
+                        rm -rf gitops-temp
+                        git clone -b main $GITOPS_REPO gitops-temp
+                    '''
+                }
+            }
+        }
+
+        stage('Update Helm Values') {
+            steps {
+                sh '''
+                    cd gitops-temp/helm/mern-app
+
+                    echo "Updating frontend image tag"
+                    sed -i "s|tag:.*|tag: ${IMAGE_TAG}|" values-frontend.yaml
+
+                    echo "Updating backend image tag"
+                    sed -i "s|tag:.*|tag: ${IMAGE_TAG}|" values-backend.yaml
+                '''
+            }
+        }
+
+        stage('Commit & Push Changes') {
+            steps {
+                withCredentials([
+                    sshUserPrivateKey(
+                        credentialsId: 'github-ssh',
+                        keyFileVariable: 'SSH_KEY'
+                    )
+                ]) {
+                    sh '''
+                        export GIT_SSH_COMMAND="ssh -i $SSH_KEY -o UserKnownHostsFile=~/.ssh/known_hosts"
                         cd gitops-temp
                         git config user.email "jenkins@ci.local"
                         git config user.name "Jenkins"
 
                         git add .
-                        git commit -m "Update image tags to ${BUILD_NUMBER}"
+                        git commit -m "Update image tags to ${IMAGE_TAG}" || echo "No changes to commit"
                         git push origin main
                     '''
                 }
@@ -60,11 +84,11 @@ pipeline {
     }
 
     post {
-        failure {
-            echo "❌ Jenkins pipeline failed!"
-        }
         success {
-            echo "✅ GitOps update successful!"
+            echo "✅ Jenkins pipeline completed. ArgoCD will now sync automatically."
+        }
+        failure {
+            echo "❌ Pipeline failed. Check logs."
         }
     }
 }
