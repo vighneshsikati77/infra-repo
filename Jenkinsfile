@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         GITOPS_REPO = "git@github.com:vighneshsikati77/mern-app.git"
-        IMAGE_TAG = "${BUILD_NUMBER}"
+        IMAGE_TAG = "latest"
     }
 
     stages {
