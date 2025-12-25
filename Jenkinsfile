@@ -3,8 +3,6 @@ pipeline {
 
     environment {
         GITOPS_REPO = "git@github.com:vighneshsikati77/mern-app.git"
-        FRONTEND_IMAGE = "vighneshsikati77/frontend"
-        BACKEND_IMAGE  = "vighneshsikati77/backend"
         IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
@@ -23,7 +21,6 @@ pipeline {
                         chmod 700 ~/.ssh
                         ssh-keyscan github.com >> ~/.ssh/known_hosts
                         chmod 644 ~/.ssh/known_hosts
-                        export GIT_SSH_COMMAND="ssh -i $SSH_KEY -o UserKnownHostsFile=~/.ssh/known_hosts"
                     '''
                 }
             }
@@ -46,16 +43,20 @@ pipeline {
             }
         }
 
-        stage('Update Helm Values') {
+        stage('Update Helm values.yaml') {
             steps {
                 sh '''
-                    cd gitops-temp/helm/mern-app
+                    echo "Helm directories:"
+                    ls gitops-temp/helm
 
-                    echo "Updating frontend image tag"
-                    sed -i "s|tag:.*|tag: ${IMAGE_TAG}|" values-frontend.yaml
+                    echo "Updating FRONTEND image tag"
+                    sed -i "s/tag:.*/tag: ${IMAGE_TAG}/" gitops-temp/helm/frontend/values.yaml
 
-                    echo "Updating backend image tag"
-                    sed -i "s|tag:.*|tag: ${IMAGE_TAG}|" values-backend.yaml
+                    echo "Updating BACKEND image tag"
+                    sed -i "s/tag:.*/tag: ${IMAGE_TAG}/" gitops-temp/helm/backend/values.yaml
+
+                    echo "Updating MONGODB image tag"
+                    sed -i "s/tag:.*/tag: ${IMAGE_TAG}/" gitops-temp/helm/mongodb/values.yaml
                 '''
             }
         }
@@ -71,8 +72,9 @@ pipeline {
                     sh '''
                         export GIT_SSH_COMMAND="ssh -i $SSH_KEY -o UserKnownHostsFile=~/.ssh/known_hosts"
                         cd gitops-temp
-                        git config user.email "jenkins@ci.local"
-                        git config user.name "Jenkins"
+
+                        git config user.email "vighneshsiakti77@gmail.com"
+                        git config user.name "vighneshsikati77"
 
                         git add .
                         git commit -m "Update image tags to ${IMAGE_TAG}" || echo "No changes to commit"
@@ -85,10 +87,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ Jenkins pipeline completed. ArgoCD will now sync automatically."
+            echo "✅ Helm values updated. ArgoCD will auto-deploy."
         }
         failure {
-            echo "❌ Pipeline failed. Check logs."
+            echo "❌ Pipeline failed."
         }
     }
 }
