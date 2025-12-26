@@ -3,17 +3,16 @@ pipeline {
 
     environment {
         GITOPS_REPO = "git@github.com:vighneshsikati77/mern-app.git"
-        IMAGE_TAG = "${BUILD_NUMBER}" // Use Jenkins build number
-        BACKEND_IMAGE = "vighneshsikati77/mern-backend"
-        FRONTEND_IMAGE = "vighneshsikati77/mern-frontend"
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
+        IMAGE_TAG = "latest" // or the tag of your DockerHub image
     }
 
     stages {
 
         stage('Prepare SSH') {
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'github-ssh', keyFileVariable: 'SSH_KEY')]) {
+                withCredentials([
+                    sshUserPrivateKey(credentialsId: 'github-ssh', keyFileVariable: 'SSH_KEY')
+                ]) {
                     sh '''
                         mkdir -p ~/.ssh
                         chmod 700 ~/.ssh
@@ -24,48 +23,11 @@ pipeline {
             }
         }
 
-        stage('Checkout Code') {
-            steps {
-                git branch: 'main', url: 'https://github.com/vighneshsikati77/infra-repo.git'
-            }
-        }
-
-        stage('Build Backend Image') {
-            steps {
-                dir('backend') {
-                    sh "docker build -t $BACKEND_IMAGE:$IMAGE_TAG ."
-                }
-            }
-        }
-
-        stage('Build Frontend Image') {
-            steps {
-                dir('frontend') {
-                    sh "docker build -t $FRONTEND_IMAGE:$IMAGE_TAG ."
-                }
-            }
-        }
-
-        stage('DockerHub Login') {
-            steps {
-                sh '''
-                    echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
-                '''
-            }
-        }
-
-        stage('Push Images') {
-            steps {
-                sh '''
-                    docker push $BACKEND_IMAGE:$IMAGE_TAG
-                    docker push $FRONTEND_IMAGE:$IMAGE_TAG
-                '''
-            }
-        }
-
         stage('Clone GitOps Repo') {
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'github-ssh', keyFileVariable: 'SSH_KEY')]) {
+                withCredentials([
+                    sshUserPrivateKey(credentialsId: 'github-ssh', keyFileVariable: 'SSH_KEY')
+                ]) {
                     sh '''
                         export GIT_SSH_COMMAND="ssh -i $SSH_KEY -o UserKnownHostsFile=~/.ssh/known_hosts"
                         rm -rf gitops-temp
@@ -78,24 +40,19 @@ pipeline {
         stage('Update Helm values.yaml') {
             steps {
                 sh '''
-                    echo "Helm directories:"
-                    ls gitops-temp/helm
-
-                    echo "Updating FRONTEND image tag"
+                    echo "Updating Helm values with pre-built Docker images"
                     sed -i "s/tag:.*/tag: ${IMAGE_TAG}/" gitops-temp/helm/frontend/values.yaml
-
-                    echo "Updating BACKEND image tag"
                     sed -i "s/tag:.*/tag: ${IMAGE_TAG}/" gitops-temp/helm/backend/values.yaml
-
-                    echo "Updating MONGODB image tag"
                     sed -i "s|^\\(\\s*tag:\\).*|\\1 6.0|" gitops-temp/helm/mongodb/values.yaml
                 '''
             }
         }
 
-        stage('Commit & Push Helm Changes') {
+        stage('Commit & Push Changes') {
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'github-ssh', keyFileVariable: 'SSH_KEY')]) {
+                withCredentials([
+                    sshUserPrivateKey(credentialsId: 'github-ssh', keyFileVariable: 'SSH_KEY')
+                ]) {
                     sh '''
                         export GIT_SSH_COMMAND="ssh -i $SSH_KEY -o UserKnownHostsFile=~/.ssh/known_hosts"
                         cd gitops-temp
@@ -112,7 +69,7 @@ pipeline {
 
     post {
         success {
-            echo "✅ Images pushed and Helm values updated. ArgoCD will auto-deploy."
+            echo "✅ Helm values updated. ArgoCD will auto-deploy."
         }
         failure {
             echo "❌ Pipeline failed."
