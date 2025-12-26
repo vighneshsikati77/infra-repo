@@ -2,95 +2,61 @@ pipeline {
     agent any
 
     environment {
-        GITOPS_REPO = "git@github.com:vighneshsikati77/mern-app.git"
-        IMAGE_TAG = "latest"
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
+        BACKEND_IMAGE = "dockerhubusername/mern-backend"
+        FRONTEND_IMAGE = "dockerhubusername/mern-frontend"
     }
 
     stages {
 
-        stage('Prepare SSH') {
+        stage('Checkout Code') {
             steps {
-                withCredentials([
-                    sshUserPrivateKey(
-                        credentialsId: 'github-ssh',
-                        keyFileVariable: 'SSH_KEY'
-                    )
-                ]) {
-                    sh '''
-                        mkdir -p ~/.ssh
-                        chmod 700 ~/.ssh
-                        ssh-keyscan github.com >> ~/.ssh/known_hosts
-                        chmod 644 ~/.ssh/known_hosts
-                    '''
+                git branch: 'main',
+                    url: 'https://github.com/vighneshsikati77/infra-repo.git'
+            }
+        }
+
+        stage('Build Backend Image') {
+            steps {
+                dir('backend') {
+                    sh 'docker build -t $BACKEND_IMAGE:latest .'
                 }
             }
         }
 
-        stage('Clone GitOps Repo') {
+        stage('Build Frontend Image') {
             steps {
-                withCredentials([
-                    sshUserPrivateKey(
-                        credentialsId: 'github-ssh',
-                        keyFileVariable: 'SSH_KEY'
-                    )
-                ]) {
-                    sh '''
-                        export GIT_SSH_COMMAND="ssh -i $SSH_KEY -o UserKnownHostsFile=~/.ssh/known_hosts"
-                        rm -rf gitops-temp
-                        git clone -b main $GITOPS_REPO gitops-temp
-                    '''
+                dir('frontend') {
+                    sh 'docker build -t $FRONTEND_IMAGE:latest .'
                 }
             }
         }
 
-        stage('Update Helm values.yaml') {
+        stage('DockerHub Login') {
             steps {
                 sh '''
-                    echo "Helm directories:"
-                    ls gitops-temp/helm
-
-                    echo "Updating FRONTEND image tag"
-                    sed -i "s/tag:.*/tag: ${IMAGE_TAG}/" gitops-temp/helm/frontend/values.yaml
-
-                    echo "Updating BACKEND image tag"
-                    sed -i "s/tag:.*/tag: ${IMAGE_TAG}/" gitops-temp/helm/backend/values.yaml
-
-                    echo "Updating MONGODB image tag"
-                    sed -i "s|^\\(\\s*tag:\\).*|\\1 6.0|" gitops-temp/helm/mongodb/values.yaml
+                echo $DOCKERHUB_CREDENTIALS_PSW | docker login \
+                -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
                 '''
             }
         }
 
-        stage('Commit & Push Changes') {
+        stage('Push Images') {
             steps {
-                withCredentials([
-                    sshUserPrivateKey(
-                        credentialsId: 'github-ssh',
-                        keyFileVariable: 'SSH_KEY'
-                    )
-                ]) {
-                    sh '''
-                        export GIT_SSH_COMMAND="ssh -i $SSH_KEY -o UserKnownHostsFile=~/.ssh/known_hosts"
-                        cd gitops-temp
-
-                        git config user.email "vighneshsiakti77@gmail.com"
-                        git config user.name "vighneshsikati77"
-
-                        git add .
-                        git commit -m "Update image tags to ${IMAGE_TAG}" || echo "No changes to commit"
-                        git push origin main
-                    '''
-                }
+                sh '''
+                docker push $BACKEND_IMAGE:latest
+                docker push $FRONTEND_IMAGE:latest
+                '''
             }
         }
     }
 
     post {
         success {
-            echo "✅ Helm values updated. ArgoCD will auto-deploy."
+            echo "Images pushed successfully 🚀"
         }
         failure {
-            echo "❌ Pipeline failed."
+            echo "Pipeline failed ❌"
         }
     }
 }
