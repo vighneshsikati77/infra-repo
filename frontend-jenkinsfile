@@ -83,7 +83,9 @@ pipeline {
         }
         stage('Checkout Code') {
             steps {
-                git credentialsId: 'GITHUB', url: 'https://github.com/vighneshsikati77/mern-app.git'
+              git branch: 'main',
+                  credentialsId: 'GITHUB', 
+                  url: 'https://github.com/vighneshsikati77/mern-app.git'
             }
         }
         stage('Update Deployment file') {
