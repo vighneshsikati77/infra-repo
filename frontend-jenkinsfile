@@ -16,7 +16,7 @@ pipeline {
                 cleanWs()
             }
         }
-        stage('Checkout from Git') {
+        stage('checkout scm') {
             steps {
                 git credentialsId: 'GITHUB', url: 'https://github.com/vighneshsikati77/infra-repo.git'
             }
