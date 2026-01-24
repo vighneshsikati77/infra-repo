@@ -19,7 +19,7 @@ pipeline {
         stage('checkout scm') {
             steps {
               git branch: 'main',
-                  credentialsId: 'GITHUB-APP',
+                  credentialsId: 'GITHUB',
                   url: 'https://github.com/vighneshsikati77/infra-repo.git'
             }
         }
@@ -84,7 +84,7 @@ pipeline {
         stage('Checkout Code') {
             steps {
               git branch: 'main',
-                  credentialsId: 'GITHUB-APP', 
+                  credentialsId: 'GITHUB', 
                   url: 'https://github.com/vighneshsikati77/mern-app.git'
             }
         }
