@@ -18,7 +18,9 @@ pipeline {
         }
         stage('Checkout from Git') {
             steps {
-                git credentialsId: 'GITHUB', url: 'https://github.com/AmanPathak-DevOps/End-to-End-Kubernetes-Three-Tier-DevSecOps-Project.git'
+              git branch: 'main',
+                  credentialsId: 'GITHUB',
+                  url: 'https://github.com/vighneshsikati77/infra-repo.git'
             }
         }
         stage('Sonarqube Analysis') {
@@ -93,8 +95,8 @@ pipeline {
                 dir('helm/backend') {
                     withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
                         sh '''
-                            git config user.email "aman07pathak@gmail.com"
-                            git config user.name "AmanPathak-DevOps"
+                            git config user.email "vighneshsikati77@gmail.com"
+                            git config user.name "vighneshsikati77"
                             BUILD_NUMBER=${BUILD_NUMBER}
                             echo $BUILD_NUMBER
                             imageTag=$(grep -oP '(?<=backend:)[^ ]+' deployment.yaml)
