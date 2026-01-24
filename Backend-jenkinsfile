@@ -16,7 +16,7 @@ pipeline {
                 cleanWs()
             }
         }
-        stage('Checkout from Git') {
+        stage('Checkout scm') {
             steps {
               git branch: 'main',
                   credentialsId: 'GITHUB',
