@@ -96,7 +96,7 @@ pipeline {
                 GIT_USER_NAME = "vighneshsikati77"
             }
             steps {
-                dir('helm/frontend') {
+                dir('helm/frontend/templates') {
                     withCredentials([string(credentialsId: 'GITHUB-TOKEN', variable: 'GITHUB_TOKEN')]) {
                         sh '''
                             git config user.email "vighneshsikati77@gmail.com"
