@@ -109,20 +109,25 @@ pipeline {
 
                           git pull --rebase https://${GITHUB_TOKEN}@github.com/vighneshsikati77/infra-repo.git main
 
-                          sed -i "s|repository:.*|repository: ${REPOSITORY_URI}${AWS_ECR_REPO_NAME}|" values.yaml
-                          sed -i "s|tag:.*|tag: \\"${BUILD_NUMBER}\\"|" values.yaml
+                          if [ -f values.yaml ]; then
+                              sed -i "s|repository:.*|repository: ${REPOSITORY_URI}${AWS_ECR_REPO_NAME}|" values.yaml
+                              sed -i "s|tag:.*|tag: \\"${BUILD_NUMBER}\\"|" values.yaml
 
-                          git add values.yaml
-                          git commit -m "Update image tag to ${BUILD_NUMBER}" || echo "No changes to commit"
+                              git add values.yaml
+                              git commit -m "Update image tag to ${BUILD_NUMBER}" || echo "No changes to commit"
 
-                          git push https://${GITHUB_TOKEN}@github.com/vighneshsikati77/infra-repo.git HEAD:main
+                              git push https://${GITHUB_TOKEN}@github.com/vighneshsikati77/infra-repo.git HEAD:main
 
-                          aws eks update-kubeconfig \
-                            --region ${AWS_DEFAULT_REGION} \
-                            --name mern-eks
+                              aws eks update-kubeconfig \
+                                --region ${AWS_DEFAULT_REGION} \
+                                --name mern-eks
 
-                          helm upgrade frontend . --install
-                        '''
+                              helm upgrade frontend . --install
+                          else
+                             echo "ERROR: values.yaml not found!"
+                             exit 1
+                         fi  
+                      '''
                     }
                 }
             }
