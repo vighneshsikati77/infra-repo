@@ -101,6 +101,9 @@ pipeline {
                         sh '''
                             echo "Deploying using Helm"
                             echo "Build number: ${BUILD_NUMBER}"
+                            aws eks update-kubeconfig \
+                             --region ${AWS_DEFAULT_REGION} \
+                             --name mern-eks
 
                            helm upgrade frontend . \
                             --install \
