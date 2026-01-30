@@ -108,7 +108,11 @@ pipeline {
                            helm upgrade frontend . \
                             --install \
                             --set image.repository=${REPOSITORY_URI}${AWS_ECR_REPO_NAME} \
-                            --set image.tag=${BUILD_NUMBER}
+                            --set image.tag=${BUILD_NUMBER}               
+              
+                           git add values.yaml
+                           git commit -m "Update values.yaml Image to version \${BUILD_NUMBER}"
+                           git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
                         '''
                   }
                }
