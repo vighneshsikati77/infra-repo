@@ -104,30 +104,19 @@ pipeline {
                 dir('helm/frontend') {
                     withCredentials([string(credentialsId: 'GITHUB-TOKEN', variable: 'GITHUB_TOKEN')]) {
                         sh '''
-                          git config user.email "vighneshsikati77@gmail.com"
-                          git config user.name "vighneshsikati77"
-
-                          git pull --rebase https://${GITHUB_TOKEN}@github.com/vighneshsikati77/infra-repo.git main
-
-                          if [ -f values.yaml ]; then
-                              sed -i "s|repository:.*|repository: ${REPOSITORY_URI}${AWS_ECR_REPO_NAME}|" values.yaml
-                              sed -i "s|tag:.*|tag: \\"${BUILD_NUMBER}\\"|" values.yaml
-
-                              git add values.yaml
-                              git commit -m "Update image tag to ${BUILD_NUMBER}" || echo "No changes to commit"
-
-                              git push https://${GITHUB_TOKEN}@github.com/vighneshsikati77/infra-repo.git HEAD:main
-
-                              aws eks update-kubeconfig \
-                                --region ${AWS_DEFAULT_REGION} \
-                                --name mern-eks
-
-                              helm upgrade frontend . --install
-                          else
-                             echo "ERROR: values.yaml not found!"
-                             exit 1
-                         fi  
-                      '''
+                            git config user.email "vighneshsikati77@gmail.com"
+                            git config user.name "vighneshsikati77"
+                            BUILD_NUMBER=${BUILD_NUMBER}
+                            echo "Deploying using Helm"
+                            echo "Build number: ${BUILD_NUMBER}"
+                            helm upgrade frontend . \
+                             --install \
+                             --set image.repository=${REPOSITORY_URI}${AWS_ECR_REPO_NAME} \
+                             --set image.tag=${BUILD_NUMBER}
+                            git add values.yaml
+                            git commit -m "Update values.yaml Image to version \${BUILD_NUMBER}"
+                            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+                        '''
                     }
                 }
             }
