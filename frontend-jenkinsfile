@@ -97,21 +97,18 @@ pipeline {
             }
             steps {
                 dir('helm/frontend') {
-                    withCredentials([string(credentialsId: 'GITHUB-TOKEN', variable: 'GITHUB_TOKEN')]) {
+                      withCredentials([string(credentialsId: 'GITHUB-TOKEN', variable: 'GITHUB_TOKEN')]) {
                         sh '''
-                            git config user.email "vighneshsikati77@gmail.com"
-                            git config user.name "vighneshsikati77"
-                            BUILD_NUMBER=${BUILD_NUMBER}
-                            echo $BUILD_NUMBER
-                            imageTag=$(grep -oP '(?<=frontend:)[^ ]+' values.yaml)
-                            echo $imageTag
-                            sed -i "s/${AWS_ECR_REPO_NAME}:${imageTag}/${AWS_ECR_REPO_NAME}:${BUILD_NUMBER}/" deployment.yaml
-                            git add values.yaml
-                            git commit -m "Update values.yaml Image to version \${BUILD_NUMBER}"
-                            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+                            echo "Deploying using Helm"
+                            echo "Build number: ${BUILD_NUMBER}"
+
+                           helm upgrade frontend . \
+                            --install \
+                            --set image.repository=${REPOSITORY_URI}${AWS_ECR_REPO_NAME} \
+                            --set image.tag=${BUILD_NUMBER}
                         '''
-                    }
-                }
+                  }
+               }
             }
         }
     }
