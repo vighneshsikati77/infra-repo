@@ -106,7 +106,7 @@ pipeline {
             }
             steps {
                dir('helm/Frontend') {
-                   withCredentials([string(credentialsId: 'GITHUB_TOKEN', variable: 'GITHUB_TOKEN')]) {
+                   withCredentials([string(credentialsId: 'GITHUB-TOKEN', variable: 'GITHUB_TOKEN')]) {
                       sh '''
                           set -e
 
