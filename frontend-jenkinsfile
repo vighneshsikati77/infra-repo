@@ -99,31 +99,35 @@ pipeline {
             }
         }
 
-        stage('Update values.yaml & Deploy') {
+        stage('Update deployment.yaml & Deploy') {
             environment {
                 GIT_REPO_NAME = "mern-app"
                 GIT_USER_NAME = "vighneshsikati77"
             }
             steps {
-                dir('helm/frontend') {
-                    withCredentials([string(credentialsId: 'GITHUB-TOKEN', variable: 'GITHUB_TOKEN')]) {
-                        sh '''
-                            git config user.email "vighneshsikati77@gmail.com"
-                            git config user.name "vighneshsikati77"
-                            BUILD_NUMBER=${BUILD_NUMBER}
-                            echo "Deploying using Helm"
-                            echo "Build number: ${BUILD_NUMBER}"
-                            helm upgrade frontend . \
-                             --install \
-                             --set image.repository=${REPOSITORY_URI}${AWS_ECR_REPO_NAME} \
-                             --set image.tag=${BUILD_NUMBER}
-                            git add deployment.yaml
-                            git commit -m "Update deployment.yaml Image to version \${BUILD_NUMBER}"
-                            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
-                        '''
-                    }
-                }
-            }
+               dir('helm/Frontend') {
+                   withCredentials([string(credentialsId: 'GITHUB_TOKEN', variable: 'GITHUB_TOKEN')]) {
+                      sh '''
+                          set -e
+
+                          git config user.email "vighneshsikati77@gmail.com"
+                          git config user.name "vighneshsikati"
+
+                          echo "Build number: ${BUILD_NUMBER}"
+
+                          CURRENT_TAG=$(awk -F: '/image:/ {print $NF}' deployment.yaml)
+                          echo "Current image tag: $CURRENT_TAG"
+
+                          sed -i "s|\\(image: .*:\\).*|\\1${BUILD_NUMBER}|" deployment.yaml
+
+                          git add deployment.yaml
+                          git diff --cached --quiet || git commit -m "Update frontend image to ${BUILD_NUMBER}"
+
+                          git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+                      '''   
+                 }
+              }
+           }
         }
     }
 }
