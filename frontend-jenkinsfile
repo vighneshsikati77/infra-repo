@@ -94,7 +94,7 @@ pipeline {
         stage('Checkout App Repo') {
             steps {
                 git branch: 'main',
-                    credentialsId: 'GITHUB',
+                    credentialsId: 'GITHUB-TOKEN',
                     url: 'https://github.com/vighneshsikati77/mern-app.git'
             }
         }
