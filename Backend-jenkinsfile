@@ -46,7 +46,6 @@ pipeline {
                           $SCANNER_HOME/bin/sonar-scanner \
                             -Dsonar.projectName=backend \
                             -Dsonar.projectKey=backend \
-                            -Dsonar.login=$SONAR_TOKEN
                         '''
                     }
                 }
