@@ -5,15 +5,13 @@ pipeline {
         nodejs 'nodejs'
     }
 
-    environment  {
-        SCANNER_HOME=tool 'sonar-scanner'
+    environment {
+        SCANNER_HOME = tool 'sonar-scanner'
         AWS_ACCOUNT_ID = credentials('ACCOUNT_ID')
         AWS_ECR_REPO_NAME = credentials('ECR_REPO1')
         AWS_DEFAULT_REGION = 'ap-south-1'
-        REPOSITORY_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
         SONAR_TOKEN = credentials('sonar-token')
     }
-
 
     stages {
 
@@ -31,25 +29,31 @@ pipeline {
             }
         }
 
+        stage('Set ECR Repository URI') {
+            steps {
+                script {
+                    env.REPOSITORY_URI = "${env.AWS_ACCOUNT_ID}.dkr.ecr.${env.AWS_DEFAULT_REGION}.amazonaws.com"
+                }
+            }
+        }
+
         stage('Sonarqube Analysis') {
             steps {
                 dir('frontend') {
                     withSonarQubeEnv('sonar-server') {
                         sh '''
                           $SCANNER_HOME/bin/sonar-scanner \
-                          -Dsonar.projectName=frontend \
-                          -Dsonar.projectKey=frontend
+                            -Dsonar.projectName=frontend \
+                            -Dsonar.projectKey=frontend
                         '''
                     }
                 }
             }
         }
 
-        stage('Quality Check') {
+        stage('Quality Gate') {
             steps {
-                script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token'
-                }
+                waitForQualityGate abortPipeline: false
             }
         }
 
@@ -64,30 +68,42 @@ pipeline {
         stage('Docker Image Build') {
             steps {
                 dir('frontend') {
-                    sh 'docker system prune -f'
-                    sh 'docker container prune -f'
-                    sh 'docker build -t ${AWS_ECR_REPO_NAME} .'
+                    sh '''
+                      docker system prune -f
+                      docker container prune -f
+                      docker build -t ${AWS_ECR_REPO_NAME}:latest .
+                    '''
                 }
             }
         }
 
         stage('ECR Image Push') {
             steps {
-                sh '''
-                  aws ecr get-login-password --region ${AWS_DEFAULT_REGION} \
-                  | docker login --username AWS --password-stdin ${REPOSITORY_URI}
+                withCredentials([
+                    [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-cred']
+                ]) {
+                    sh '''
+                      aws sts get-caller-identity
 
-                  docker tag ${AWS_ECR_REPO_NAME} \
-                  ${REPOSITORY_URI}${AWS_ECR_REPO_NAME}:${BUILD_NUMBER}
+                      aws ecr get-login-password --region ${AWS_DEFAULT_REGION} \
+                      | docker login --username AWS --password-stdin ${REPOSITORY_URI}
 
-                  docker push ${REPOSITORY_URI}${AWS_ECR_REPO_NAME}:${BUILD_NUMBER}
-                '''
+                      docker tag ${AWS_ECR_REPO_NAME}:latest \
+                      ${REPOSITORY_URI}/${AWS_ECR_REPO_NAME}:${BUILD_NUMBER}
+
+                      docker push ${REPOSITORY_URI}/${AWS_ECR_REPO_NAME}:${BUILD_NUMBER}
+                    '''
+                }
             }
         }
 
         stage('TRIVY Image Scan') {
             steps {
-                sh 'trivy image ${REPOSITORY_URI}${AWS_ECR_REPO_NAME}:${BUILD_NUMBER} > trivyimage.txt'
+                sh '''
+                  trivy image \
+                  ${REPOSITORY_URI}/${AWS_ECR_REPO_NAME}:${BUILD_NUMBER} \
+                  > trivyimage.txt
+                '''
             }
         }
 
@@ -99,35 +115,34 @@ pipeline {
             }
         }
 
-        stage('Update deployment.yaml & Deploy') {
+        stage('Update deployment.yaml') {
             environment {
                 GIT_REPO_NAME = "mern-app"
                 GIT_USER_NAME = "vighneshsikati77"
             }
             steps {
-               dir('helm/frontend') {
-                   withCredentials([string(credentialsId: 'GITHUB-TOKEN', variable: 'GITHUB_TOKEN')]) {
-                      sh '''
+                dir('helm/frontend') {
+                    withCredentials([string(credentialsId: 'GITHUB-TOKEN', variable: 'GITHUB_TOKEN')]) {
+                        sh '''
                           set -e
 
                           git config user.email "vighneshsikati77@gmail.com"
-                          git config user.name "vighneshsikati"
+                          git config user.name "vighneshsikati77"
 
-                          echo "Build number: ${BUILD_NUMBER}"
-
-                          CURRENT_TAG=$(awk -F: '/image:/ {print $NF}' deployment.yaml)
+                          CURRENT_TAG=$(grep -oP '(?<=frontend:)[^ ]+' deployment.yaml || true)
                           echo "Current image tag: $CURRENT_TAG"
 
-                          sed -i "s|\\(image: .*:\\).*|\\1${BUILD_NUMBER}|" deployment.yaml
+                          sed -i "s/${AWS_ECR_REPO_NAME}:${CURRENT_TAG}/${AWS_ECR_REPO_NAME}:${BUILD_NUMBER}/" deployment.yaml
 
                           git add deployment.yaml
-                          git diff --cached --quiet || git commit -m "Update frontend image to ${BUILD_NUMBER}"
+                          git diff --cached --quiet || \
+                          git commit -m "Update frontend image to ${BUILD_NUMBER}"
 
                           git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
-                      '''   
-                 }
-              }
-           }
+                        '''
+                    }
+                }
+            }
         }
     }
 }
