@@ -59,7 +59,7 @@ pipeline {
 
         stage('OWASP Dependency Check') {
             steps {
-                dir('backend') {
+                dir('frontend') {
                     dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit',
                                     odcInstallation: 'DP-Check'
                     dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
