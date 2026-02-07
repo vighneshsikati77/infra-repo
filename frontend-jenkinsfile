@@ -5,15 +5,15 @@ pipeline {
         nodejs 'nodejs'
     }
 
-    environment {
-        AWS_ACCESS_KEY_ID     = credentials('access-key')
-        AWS_SECRET_ACCESS_KEY = credentials('secret-access-key')
-        SCANNER_HOME          = tool('sonar-scanner')
-        AWS_ACCOUNT_ID        = credentials('ACCOUNT_ID')
-        AWS_ECR_REPO_NAME     = credentials('ECR_REPO1')
-        AWS_DEFAULT_REGION    = 'ap-south-1'
-        REPOSITORY_URI        = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/"
+    environment  {
+        SCANNER_HOME=tool 'sonar-scanner'
+        AWS_ACCOUNT_ID = credentials('ACCOUNT_ID')
+        AWS_ECR_REPO_NAME = credentials('ECR_REPO1')
+        AWS_DEFAULT_REGION = 'ap-south-1'
+        REPOSITORY_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
+        SONAR_TOKEN = credentials('sonar-token')
     }
+
 
     stages {
 
