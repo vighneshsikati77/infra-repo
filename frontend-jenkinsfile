@@ -122,7 +122,7 @@ pipeline {
         stage('Checkout App Repo') {
             steps {
                 git branch: 'main',
-                    credentialsId: 'GIT-TOKEN',
+                    credentialsId: 'GITHUB-TOKEN',
                     url: 'https://github.com/vighneshsikati77/mern-app.git'
             }
         }
@@ -134,7 +134,7 @@ pipeline {
             }
             steps {
                 dir('helm/frontend') {
-                    withCredentials([string(credentialsId: 'GIT-TOKEN', variable: 'GITHUB_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'GITHUB-TOKEN',usernameVariable: 'GIT_USER',passwordVariable: 'GIT_PASS')]) {
                         sh '''
                           set -e
 
