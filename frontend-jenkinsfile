@@ -134,7 +134,7 @@ pipeline {
             }
             steps {
                 dir('helm/frontend') {
-                    withCredentials([string(credentialsId: 'GITHUB-TOKEN',usernameVariable: 'GIT_USER',passwordVariable: 'GIT_PASS')]) {
+                    withCredentials([usernamePassword( credentialsId: 'GITHUB-TOKEN',usernameVariable: 'GIT_USER',passwordVariable: 'GIT_PASS')]) { 
                         sh '''
                           set -e
 
@@ -144,13 +144,13 @@ pipeline {
                           CURRENT_TAG=$(grep -oP '(?<=frontend:)[^ ]+' deployment.yaml || true)
                           echo "Current image tag: $CURRENT_TAG"
 
-                          sed -i "s/${AWS_ECR_REPO_NAME}:${CURRENT_TAG}/${AWS_ECR_REPO_NAME}:${BUILD_NUMBER}/" deployment.yaml
+                          sed -i "s|image:.*|image: ${REPOSITORY_URI}/${AWS_ECR_REPO_NAME}:${BUILD_NUMBER}|" deployment.yaml
 
                           git add deployment.yaml
                           git diff --cached --quiet || \
                           git commit -m "Update frontend image to ${BUILD_NUMBER}"
 
-                          git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+                          git push https://${GIT_USER}:${GIT_PASS}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git HEAD:main
                         '''
                     }
                 }
