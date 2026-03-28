@@ -84,7 +84,7 @@ pipeline {
             steps {
                 dir('backend') {
                     sh '''
-                      rm -rf ~/.cache/trivy   // ✅ avoid DB corruption
+                      rm -rf ~/.cache/trivy
                       trivy fs --scanners vuln --no-progress . > trivyfs.txt
                     '''
                 }
