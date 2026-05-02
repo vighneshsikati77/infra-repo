@@ -152,14 +152,15 @@ pipeline {
                         credentialsId: 'GITHUB-TOKEN',
                         usernameVariable: 'GIT_USER',
                         passwordVariable: 'GIT_PASS')]) {
+                    wrap([$class: 'BuildUser']) {
                         sh '''
-                          git config user.email "vighneshsikati77@gmail.com"
-                          git config user.name "vighneshsikati77"
+                          git config user.email "${BUILD_USER}"
+                          git config user.name "${BUILD_USER_EMAIL}"
 
-                          sed -i "s|image:.*|image: ${REPOSITORY_URI}/${AWS_ECR_REPO_NAME}:${BUILD_NUMBER}|" deployment.yaml
+                          sed -i "s|image:.*|image: ${REPOSITORY_URI}/backend:${BUILD_NUMBER}|" deployment.yaml
 
                           git add deployment.yaml
-                          git commit -m "Update backend image to ${BUILD_NUMBER}"
+                          git commit -m "Update backend image to ${BUILD_NUMBER} by ${BUILD_USER}"
                           git push https://${GIT_USER}:${GIT_PASS}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git HEAD:main
                         '''
                     }
@@ -168,3 +169,13 @@ pipeline {
         }
     }
 }
+post {
+        success {
+            echo "Pipeline executed successfully"
+        }
+        failure {
+            echo "Pipeline failed"
+        }
+    }
+}
+
