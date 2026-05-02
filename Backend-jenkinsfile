@@ -157,7 +157,7 @@ pipeline {
                           git config user.email "${BUILD_USER}"
                           git config user.name "${BUILD_USER_EMAIL}"
 
-                          sed -i "s|image:.*|image: ${REPOSITORY_URI}/backend:${BUILD_NUMBER}|" deployment.yaml
+                          sed -i "s|image: .*|image: ${REPOSITORY_URI}/backend:${BUILD_NUMBER}|" deployment.yaml
 
                           git add deployment.yaml
                           git commit -m "Update backend image to ${BUILD_NUMBER} by ${BUILD_USER}"
