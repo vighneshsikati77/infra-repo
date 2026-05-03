@@ -29,7 +29,7 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies') {   // ✅ NEW STAGE (IMPORTANT)
+        stage('Install Dependencies') 
             steps {
                 dir('backend') {
                     sh '''
