@@ -29,7 +29,7 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies') 
+        stage('Install Dependencies') {   
             steps {
                 dir('backend') {
                     sh '''
@@ -96,7 +96,7 @@ pipeline {
                 dir('backend') {
                     sh '''
                       docker system prune -f
-                      docker build -t ${AWS_ECR_REPO_NAME}:latest .
+                      docker build -t ${AWS_ECR_REPO_NAME}:latest . 
                     '''
                 }
             }
@@ -152,24 +152,25 @@ pipeline {
                         credentialsId: 'GITHUB-TOKEN',
                         usernameVariable: 'GIT_USER',
                         passwordVariable: 'GIT_PASS')]) {
-                    wrap([$class: 'BuildUser']) {
-                        sh '''
-                          git config user.name "${BUILD_USER}"
-                          git config user.email "${BUILD_USER_EMAIL}"
-                          
-                          sed -i "s|image: .*|image: ${REPOSITORY_URI}/backend:${BUILD_NUMBER}|" deployment.yaml
+                        wrap([$class: 'BuildUser']) {
+                            sh '''
+                              git config user.name "${BUILD_USER}"
+                              git config user.email "${BUILD_USER_EMAIL}"
+                              
+                              sed -i "s|image: .*|image: ${REPOSITORY_URI}/backend:${BUILD_NUMBER}|" deployment.yaml
 
-                          git add deployment.yaml
-                          git commit -m "Update backend image to ${BUILD_NUMBER} by ${BUILD_USER}"
-                          git push https://${GIT_USER}:${GIT_PASS}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git HEAD:main
-                        '''
+                              git add deployment.yaml
+                              git commit -m "Update backend image to ${BUILD_NUMBER} by ${BUILD_USER}"
+                              git push https://${GIT_USER}:${GIT_PASS}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git HEAD:main
+                            '''
+                        }
                     }
                 }
             }
         }
     }
-}
-post {
+
+    post {
         success {
             echo "Pipeline executed successfully"
         }
@@ -178,4 +179,3 @@ post {
         }
     }
 }
-
